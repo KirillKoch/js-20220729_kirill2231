@@ -5,39 +5,26 @@
  * @returns {string} - the new string without extra symbols according passed size
  */
 export function trimSymbols(string, size) {
-  const stringToArray = string.split("");
-  let amountEqualSymbs = 0;
-  let prevSymb = stringToArray[0];
-  let currentSymb;
-  let isEqualSymbs;
-
-  if (size === 0) {
-    return "";
+  if (size === undefined) return string;
+  if (size === 0) return '';
+  
+  let newString = '';
+  let order = 0;
+  let prevLetter = string[0];
+  
+  for (const letter of string) { 
+    if (letter !== prevLetter) {
+      order = 0;
+      prevLetter = letter;
+    }
+    
+    if (order < size && letter === prevLetter) {
+      newString += letter;
+      order++;
+      continue;
+    }    
   }
-
-  if (!size) {
-    return string;
-  }
-
-  return stringToArray
-    .filter(
-      elem => {
-        currentSymb = elem;
-        isEqualSymbs = prevSymb === currentSymb;
-        prevSymb = currentSymb;
-
-        if (isEqualSymbs && (amountEqualSymbs < size)) {
-          amountEqualSymbs++;
-          return true;
-        }
-
-        if (!isEqualSymbs) {
-          amountEqualSymbs = 1;
-          return true;
-        }
-
-        return false;
-      })
-    .join("");
+  
+  return newString;
 }
 
