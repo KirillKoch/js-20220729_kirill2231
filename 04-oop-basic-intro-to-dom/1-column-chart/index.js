@@ -1,6 +1,6 @@
 export default class ColumnChart {
   chartHeight = 50;
-  cachingElements = {};
+  subElements = {};
 
   constructor(
     {
@@ -8,87 +8,93 @@ export default class ColumnChart {
       label = '',
       value = 0,
       link = '',
-      formatHeading = data => data
-    }
-    = {}) {
-
+      formatHeading = value => value
+    } = {}) {
     this.data = data;
     this.label = label;
-    this.value = formatHeading(value);
+    this.value = value;
     this.link = link;
+    this.formatHeading = formatHeading;
 
     this.render();
   }
 
-  getTemplate() {
+  template() {
     return `
-        <div class="column-chart column-chart_loading" style="--chart-height: ${this.chartHeight}">
-            <div class="column-chart__title">
-            ${this.label}
-            ${this.getLink()}
-            </div>
-            <div class="column-chart__container">
-              <div class="column-chart__header" data-element="header">${this.value}</div>
-              <div class="column-chart__chart" data-element="body">
-                ${this.getColumnChart(this.data)}
-              </div>
-            </div>
+      <div class="column-chart column-chart_loading" style="--chart-height: ${this.chartHeight}">
+        <div class="column-chart__title">
+          ${this.getTitle()}
+        </div>
+        <div class="column-chart__container">
+          <div data-element="header" class="column-chart__header">${this.formatHeading(this.value)}</div>
+          <div data-element="body" class="column-chart__chart">
+            ${this.getBody(this.data)}
+          </div>
+        </div>
       </div>
-        `;
+    `;
   }
 
   render() {
-    const element = document.createElement('div');
-    element.innerHTML = this.getTemplate();
+    const div = document.createElement('div');
 
-    this.element = element.firstElementChild;
+    div.innerHTML = this.template();
+
+    this.element = div.children[0];
 
     if (this.data.length) {
       this.element.classList.remove('column-chart_loading');
     }
 
-    this.cachingElements = this.getCachingElements();
+    this.subElements = this.getSubElements();
   }
 
-  getCachingElements() {
+  getSubElements() {
     const result = {};
-    const elements = this.element.querySelectorAll("[data-element]");
+    const subElements = this.element.querySelectorAll('[data-element]');
 
-    elements.forEach(subElement => {
+    for (let subElement of subElements) {
       const name = subElement.dataset.element;
+
       result[name] = subElement;
-    });
+    }
 
     return result;
   }
 
-  getColumnChart(data) {
+  getTitle() {
+    return `
+      ${this.label}
+      ${this.link ? `<a href="${this.link}" class="column-chart__link">View all</a>` : ''}
+    `;
+  }
+
+  getBody(data) {
+    const array = this.getColumnProps(data);
+
+    return array.map(column => {
+      return `<div style="--value: ${column.value}" data-tooltip="${column.percent}"></div>`;
+    }).join('');
+  }
+
+  getColumnProps(data) {
     const maxValue = Math.max(...data);
     const scale = this.chartHeight / maxValue;
-
-    const columnProps = data.map(item => {
+  
+    return data.map(item => {
       return {
         percent: (item / maxValue * 100).toFixed(0) + '%',
         value: String(Math.floor(item * scale))
       };
     });
-
-    return columnProps.map(item => {
-      return `<div style="--value: ${item.value}" data-tooltip="${item.percent}"></div>`;
-    })
-    .join("");
-  }
-
-  getLink() {
-    return this.link ?
-      `<a class="column-chart__link" href="${this.link}">Подробнее</a>`
-      : "";
   }
 
   update(data) {
-    this.data = data;
+    if (data.length) {
+      this.element.classList.remove('column-chart_loading');
+    }
 
-    this.cachingElements.body.innerHTML = this.getColumnChart(data);
+    this.subElements.body.innerHTML = this.getBody([...data, ...this.data]);
   }
 
   remove() {
@@ -100,6 +106,7 @@ export default class ColumnChart {
   destroy() {
     this.remove();
     this.element = null;
-    this.cachingElements = {};
+    this.subElements = {};
   }
+
 }
