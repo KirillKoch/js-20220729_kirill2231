@@ -1,60 +1,75 @@
 export default class NotificationMessage {
-  static activeNotification;
+  static wrapper;
 
-  timeout;
+  subElements = {};
+  element;
+  timer;
 
-  constructor(
-    message = '',
-    {
-      duration = 1000,
-      type = ''
-    } = {}) {
-
+  constructor(message,
+    { 
+      duration = 2000,
+      type = 'success'
+    } = {}
+  ) {
     this.message = message;
+    this.durationToSecond = (duration / 1000) + 's';
     this.duration = duration;
     this.type = type;
 
     this.render();
   }
 
-  getTemplate() {
+  get template() {
     return `
-        <div class="notification ${this.type}" style="--value:${this.millisecondsToSeconds(this.duration)}s" data-element="notification">
-            <div class="timer"></div>
-            <div class="inner-wrapper">
-                <div class="notification-header">${this.type}</div>
-                <div class="notification-body">
-                    ${this.message}
-                </div>
-            </div>
+      <div class="notification ${this.type}" style="--value:${this.durationToSecond}">
+        <div class="timer"></div>
+        <div class="inner-wrapper">
+          <div class="notification-header" data-element="header">${this.type}</div>
+          <div class="notification-body" data-element="body">
+            ${this.message}
+          </div>
         </div>
-        `;
+      </div>
+    `;
   }
 
   render() {
-    const element = document.createElement('div');
-    element.innerHTML = this.getTemplate();
-    this.element = element.firstElementChild;
-  }
+    const div = document.createElement('div');
 
-  millisecondsToSeconds(milliseconds) {
-    return milliseconds / 1000;
+    div.innerHTML = this.template;
+
+    this.element = div.children[0];
+
+    this.subElements = this.getSubElements();
   }
 
   show(parent = document.body) {
-    if (NotificationMessage.activeNotification) {
-      NotificationMessage.activeNotification.remove();
+    if (NotificationMessage.wrapper) {
+      NotificationMessage.wrapper.remove();
     }
 
     parent.append(this.element);
 
-    this.timeout = setTimeout(() => this.remove(), this.duration);
+    this.timer = setTimeout(() => this.remove(), this.duration);
 
-    NotificationMessage.activeNotification = this;
+    NotificationMessage.wrapper = this;
+  }
+
+  getSubElements() {
+    const result = {};
+    const subElements = this.element.querySelectorAll('[data-element]');
+
+    for (let subElement of subElements) {
+      const name = subElement.dataset.element;
+
+      result[name] = subElement;
+    }
+
+    return result;
   }
 
   remove() {
-    clearTimeout(this.timeout);
+    clearTimeout(this.timer);
 
     if (this.element) {
       this.element.remove();
@@ -64,5 +79,7 @@ export default class NotificationMessage {
   destroy() {
     this.remove();
     this.element = null;
+    NotificationMessage.wrapper = null;
+    this.subElements = {};
   }
 }
